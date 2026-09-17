@@ -37,7 +37,7 @@ jobs:
 
           ZH_PERSON_ID: '39367'
           ZH_SPACE_ID: '32154'
-          ZH_DESK_IDS: '32286'          # Desk 132
+          ZH_DESK_IDS: '32256,32286'    # Desk 102 preferido, Desk 132 de reserva
           ZH_START: '09:00'
           ZH_END: '18:00'
           ZH_FALLBACK: 'fail'           # 'any' para coger cualquier puesto libre
