@@ -9,10 +9,13 @@ on:
     - cron: '0 23 * * 0-4'
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: 'Simular sin reservar'
-        type: boolean
-        default: true
+      modo:
+        description: 'simulacion = no reserva nada | real = reserva de verdad'
+        type: choice
+        options:
+          - simulacion
+          - real
+        default: simulacion
 
 concurrency:
   group: reserva-zityhub
@@ -44,5 +47,7 @@ jobs:
           ZH_ADVANCE_DAYS: '5'
           ZH_HOLIDAYS: ${{ vars.ZH_HOLIDAYS }}
           ZH_ONLY_AFTER_MIDNIGHT: ${{ github.event_name == 'schedule' && '1' || '0' }}
-          ZH_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          # Comparacion contra cadena: inequivoca. Un boolean llega como "false"
+          # y en las expresiones de GitHub toda cadena no vacia es verdadera.
+          ZH_DRY_RUN: ${{ inputs.modo == 'real' && '0' || '1' }}
         run: node book.mjs
