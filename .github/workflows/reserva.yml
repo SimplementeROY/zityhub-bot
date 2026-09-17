@@ -1,0 +1,48 @@
+name: Reserva Zityhub
+
+on:
+  schedule:
+    # GitHub Actions programa en UTC. Medianoche de Madrid son las 22:00 UTC en
+    # horario de verano y las 23:00 UTC en invierno, del dia anterior.
+    # Se lanzan las dos y el script descarta la que no toca.
+    - cron: '0 22 * * 0-4'
+    - cron: '0 23 * * 0-4'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Simular sin reservar'
+        type: boolean
+        default: true
+
+concurrency:
+  group: reserva-zityhub
+  cancel-in-progress: false
+
+jobs:
+  reservar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Reservar puesto
+        env:
+          ZITYHUB_COOKIE: ${{ secrets.ZITYHUB_COOKIE }}
+          ZITYHUB_EMAIL: ${{ secrets.ZITYHUB_EMAIL }}
+          ZITYHUB_PASSWORD: ${{ secrets.ZITYHUB_PASSWORD }}
+
+          ZH_PERSON_ID: '39367'
+          ZH_SPACE_ID: '32154'
+          ZH_DESK_IDS: '32286'          # Desk 132
+          ZH_START: '09:00'
+          ZH_END: '18:00'
+          ZH_FALLBACK: 'fail'           # 'any' para coger cualquier puesto libre
+          ZH_ADVANCE_DAYS: '5'
+          ZH_HOLIDAYS: ${{ vars.ZH_HOLIDAYS }}
+          ZH_ONLY_AFTER_MIDNIGHT: ${{ github.event_name == 'schedule' && '1' || '0' }}
+          ZH_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+        run: node book.mjs
