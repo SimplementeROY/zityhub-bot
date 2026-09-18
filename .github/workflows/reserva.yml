@@ -2,11 +2,11 @@ name: Reserva Zityhub
 
 on:
   schedule:
-    # GitHub Actions programa en UTC. Medianoche de Madrid son las 22:00 UTC en
-    # horario de verano y las 23:00 UTC en invierno, del dia anterior.
-    # Se lanzan las dos y el script descarta la que no toca.
-    - cron: '0 22 * * 0-4'
-    - cron: '0 23 * * 0-4'
+    # Arranca ~15 min ANTES de la medianoche de Madrid y el script espera despierto
+    # a que se abra el dia nuevo. Minuto 47 y no en punto: el cron de GitHub es best
+    # effort y las horas en punto son las mas congestionadas.
+    - cron: '47 21 * * 0-4'   # 23:47 Madrid en horario de verano
+    - cron: '47 22 * * 0-4'   # 23:47 Madrid en horario de invierno
   workflow_dispatch:
     inputs:
       modo:
@@ -24,7 +24,7 @@ concurrency:
 jobs:
   reservar:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -46,8 +46,17 @@ jobs:
           ZH_FALLBACK: 'fail'           # 'any' para coger cualquier puesto libre
           ZH_ADVANCE_DAYS: '5'
           ZH_HOLIDAYS: ${{ vars.ZH_HOLIDAYS }}
-          ZH_ONLY_AFTER_MIDNIGHT: ${{ github.event_name == 'schedule' && '1' || '0' }}
-          # Comparacion contra cadena: inequivoca. Un boolean llega como "false"
-          # y en las expresiones de GitHub toda cadena no vacia es verdadera.
-          ZH_DRY_RUN: ${{ inputs.modo == 'real' && '0' || '1' }}
+
+          # Si arranca antes de medianoche, espera hasta 45 min a que abra el dia.
+          # Si el cron llega tarde, no espera nada y dispara ya.
+          ZH_WAIT_FOR_MIDNIGHT: '1'
+          ZH_MAX_WAIT_MIN: '45'
+
+          # Y luego reintenta 20 min por si alguien cancela o la API tarda en abrir.
+          ZH_ATTEMPTS: '40'
+          ZH_ATTEMPT_GAP_MS: '30000'
+
+          # Solo simula cuando se lanza a mano y se pide expresamente. En las
+          # ejecuciones programadas 'inputs.modo' viene vacio: tienen que ser reales.
+          ZH_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.modo != 'real' && '1' || '0' }}
         run: node book.mjs
