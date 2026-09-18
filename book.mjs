@@ -195,17 +195,21 @@ async function bookOnce(date) {
   return { retry: true, reason: `Error ${r.status}: ${JSON.stringify(r.data)}` };
 }
 
-async function main() {
-  const today = todayIn(CFG.tz);
-
-  // GitHub Actions programa en UTC y no entiende de cambios de hora: se lanzan dos
-  // ejecuciones (22:00 y 23:00 UTC) y solo debe actuar la que cae recién pasada
-  // la medianoche de Madrid, que es cuando la ventana abre un día nuevo.
-  if (process.env.ZH_ONLY_AFTER_MIDNIGHT === '1') {
-    const hour = Number(new Intl.DateTimeFormat('en-GB',
-      { timeZone: CFG.tz, hour: '2-digit', hour12: false }).format(new Date()));
-    if (hour >= 2) { log(`Son las ${hour}:00 en Madrid, no es la ventana de medianoche. Salgo.`); return; }
+/** Si arrancamos poco antes de la medianoche de Madrid, espera a que se abra el dia nuevo. */
+async function waitForWindow() {
+  if (process.env.ZH_WAIT_FOR_MIDNIGHT !== '1') return;
+  const maxWaitMs = int(process.env.ZH_MAX_WAIT_MIN, 45) * 60000;
+  const ms = wallToUtc(addDays(todayIn(CFG.tz), 1), '00:00', CFG.tz).getTime() + 5000 - Date.now();
+  if (ms > 0 && ms <= maxWaitMs) {
+    log('Faltan ' + Math.round(ms / 1000) + 's para la medianoche de Madrid. Espero y disparo en cuanto abra el dia.');
+    await new Promise(r => setTimeout(r, ms));
   }
+}
+
+async function main() {
+  await waitForWindow();
+
+  const today = todayIn(CFG.tz);
 
   const target = nthBusinessDayAfter(today, CFG.advanceBusinessDays);
 
