@@ -58,5 +58,9 @@ jobs:
 
           # Solo simula cuando se lanza a mano y se pide expresamente. En las
           # ejecuciones programadas 'inputs.modo' viene vacio: tienen que ser reales.
+          # Un job en verde tiene que significar "hay reserva". En las tiradas
+          # programadas el script consulta Zityhub al terminar y falla si no la ve.
+          ZH_REQUIRE_BOOKING: ${{ github.event_name == 'schedule' && '1' || '0' }}
+
           ZH_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.modo != 'real' && '1' || '0' }}
         run: node book.mjs
