@@ -26,6 +26,7 @@ const CFG = {
   attempts:   int(process.env.ZH_ATTEMPTS, 10),
   attemptGapMs: int(process.env.ZH_ATTEMPT_GAP_MS, 15000),
   dryRun:     process.env.ZH_DRY_RUN === '1',
+  requireBooking: process.env.ZH_REQUIRE_BOOKING === '1',
   cookie:     process.env.ZITYHUB_COOKIE || '',
   email:      process.env.ZITYHUB_EMAIL || '',
   password:   process.env.ZITYHUB_PASSWORD || '',
@@ -206,6 +207,30 @@ async function waitForWindow() {
   }
 }
 
+/** Comprueba en Zityhub que la reserva existe de verdad. Un job en verde tiene que
+ *  significar "hay reserva", no "el script termino sin lanzar excepciones". */
+async function findBookingFor(date) {
+  const qs = 'person=' + CFG.personId + '&offset=0&limit=100&sortBy=from&direction=desc';
+  const r = await api('GET', '/api/v1/booking/search?' + qs);
+  if (!r.ok || !Array.isArray(r.data)) return null;
+  return r.data.find(b => String(b.from).slice(0, 10) === date
+    && b.status !== 'cancelled' && !b.cancelled_at) || null;
+}
+
+async function confirm(date, outcome) {
+  if (outcome.dryRun) {
+    if (CFG.requireBooking) {
+      throw new Error('Se ha ejecutado en simulacion una tirada que debia reservar de verdad. Revisa ZH_DRY_RUN en el workflow.');
+    }
+    return;
+  }
+  const b = await findBookingFor(date);
+  if (!b) {
+    throw new Error('El script daba por hecha la reserva del ' + date + ', pero Zityhub no la encuentra. No te fies de este job.');
+  }
+  log('VERIFICADO en Zityhub: reserva ' + b.id + ', ' + b.from + ' -> ' + b.to + ', puesto ' + b.deskId + ', estado ' + b.status + '.');
+}
+
 async function main() {
   await waitForWindow();
 
@@ -225,6 +250,7 @@ async function main() {
       if (r.skipped) log(`OK — ${r.reason}`);
       else if (r.dryRun) log('OK — simulación completada.');
       else log(`RESERVADO: ${r.desk.resourceName} el ${target} de ${CFG.startLocal} a ${CFG.endLocal} (id ${r.booking.id}).`);
+      await confirm(target, r);
       return;
     }
     log(`Intento ${i}/${CFG.attempts}: ${r.reason}`);
