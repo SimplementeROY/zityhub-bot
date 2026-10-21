@@ -2,8 +2,9 @@
 /**
  * Reserva automática de puesto en Zityhub.
  *
- * Reserva el día que acaba de abrirse en la ventana de reserva (5 días laborables)
- * en el puesto configurado, de 09:00 a 18:00 hora de Madrid.
+ * Reserva el día que acaba de abrirse en la ventana de reserva (ZH_ADVANCE_DAYS días
+ * laborables) en el puesto configurado. Toda la configuración va por variables de
+ * entorno: ver README.md.
  *
  * Node >= 20 (usa fetch nativo). Sin dependencias.
  */
@@ -12,10 +13,10 @@ const API = 'https://api.zityhub.com';
 
 // ---------------------------------------------------------------- configuración
 const CFG = {
-  personId:  int(process.env.ZH_PERSON_ID, 39367),          // Melvin Agunias
-  spaceId:   int(process.env.ZH_SPACE_ID, 32154),           // Planta Baja: Puestos Flexibles (1-132)
+  personId:  int(process.env.ZH_PERSON_ID, null),
+  spaceId:   int(process.env.ZH_SPACE_ID, null),
   // Puestos por orden de preferencia. El primero libre se lleva la reserva.
-  deskIds:   list(process.env.ZH_DESK_IDS, [32286]),        // 32286 = Desk 132
+  deskIds:   list(process.env.ZH_DESK_IDS, []),
   startLocal: process.env.ZH_START || '09:00',
   endLocal:   process.env.ZH_END   || '18:00',
   tz:         process.env.ZH_TZ    || 'Europe/Madrid',
@@ -31,6 +32,16 @@ const CFG = {
   email:      process.env.ZITYHUB_EMAIL || '',
   password:   process.env.ZITYHUB_PASSWORD || '',
 };
+
+function checkConfig() {
+  const missing = [];
+  if (!CFG.personId) missing.push('ZH_PERSON_ID');
+  if (!CFG.spaceId) missing.push('ZH_SPACE_ID');
+  if (!CFG.deskIds.length && CFG.fallback !== 'any') missing.push('ZH_DESK_IDS');
+  if (missing.length) {
+    throw new Error(`Faltan variables: ${missing.join(', ')}. Ponlas en Settings > Secrets and variables > Actions > Variables (ver README.md).`);
+  }
+}
 
 function int(v, d) { const n = parseInt(v, 10); return Number.isFinite(n) ? n : d; }
 function list(v, d, map = Number) { return v ? v.split(',').map(s => map(s.trim())).filter(Boolean) : d; }
@@ -196,13 +207,13 @@ async function bookOnce(date) {
   return { retry: true, reason: `Error ${r.status}: ${JSON.stringify(r.data)}` };
 }
 
-/** Si arrancamos poco antes de la medianoche de Madrid, espera a que se abra el dia nuevo. */
+/** Si arrancamos poco antes de la medianoche (en CFG.tz), espera a que se abra el dia nuevo. */
 async function waitForWindow() {
   if (process.env.ZH_WAIT_FOR_MIDNIGHT !== '1') return;
   const maxWaitMs = int(process.env.ZH_MAX_WAIT_MIN, 45) * 60000;
   const ms = wallToUtc(addDays(todayIn(CFG.tz), 1), '00:00', CFG.tz).getTime() + 5000 - Date.now();
   if (ms > 0 && ms <= maxWaitMs) {
-    log('Faltan ' + Math.round(ms / 1000) + 's para la medianoche de Madrid. Espero y disparo en cuanto abra el dia.');
+    log('Faltan ' + Math.round(ms / 1000) + 's para la medianoche en ' + CFG.tz + '. Espero y disparo en cuanto abra el dia.');
     await new Promise(r => setTimeout(r, ms));
   }
 }
@@ -232,6 +243,7 @@ async function confirm(date, outcome) {
 }
 
 async function main() {
+  checkConfig();
   await waitForWindow();
 
   const today = todayIn(CFG.tz);

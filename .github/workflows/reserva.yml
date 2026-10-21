@@ -38,13 +38,16 @@ jobs:
           ZITYHUB_EMAIL: ${{ secrets.ZITYHUB_EMAIL }}
           ZITYHUB_PASSWORD: ${{ secrets.ZITYHUB_PASSWORD }}
 
-          ZH_PERSON_ID: '39367'
-          ZH_SPACE_ID: '32154'
-          ZH_DESK_IDS: '32256,32286'    # Desk 102 preferido, Desk 132 de reserva
-          ZH_START: '09:00'
-          ZH_END: '18:00'
-          ZH_FALLBACK: 'fail'           # 'any' para coger cualquier puesto libre
-          ZH_ADVANCE_DAYS: '5'
+          # Configuracion de cada persona: Settings > Secrets and variables > Actions >
+          # Variables. Las vacias usan el valor por defecto del script (ver README.md).
+          ZH_PERSON_ID: ${{ vars.ZH_PERSON_ID }}
+          ZH_SPACE_ID: ${{ vars.ZH_SPACE_ID }}
+          ZH_DESK_IDS: ${{ vars.ZH_DESK_IDS }}
+          ZH_START: ${{ vars.ZH_START }}
+          ZH_END: ${{ vars.ZH_END }}
+          ZH_TZ: ${{ vars.ZH_TZ }}
+          ZH_FALLBACK: ${{ vars.ZH_FALLBACK }}
+          ZH_ADVANCE_DAYS: ${{ vars.ZH_ADVANCE_DAYS }}
           ZH_HOLIDAYS: ${{ vars.ZH_HOLIDAYS }}
 
           # Si arranca antes de medianoche, espera hasta 45 min a que abra el dia.
