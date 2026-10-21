@@ -16,6 +16,10 @@ on:
           - simulacion
           - real
         default: simulacion
+      fecha:
+        description: 'Dia concreto YYYY-MM-DD, aunque sea finde (vacio = el que toca)'
+        type: string
+        required: false
 
 concurrency:
   group: reserva-zityhub
@@ -49,6 +53,7 @@ jobs:
           ZH_FALLBACK: ${{ vars.ZH_FALLBACK }}
           ZH_ADVANCE_DAYS: ${{ vars.ZH_ADVANCE_DAYS }}
           ZH_HOLIDAYS: ${{ vars.ZH_HOLIDAYS }}
+          ZH_DATE: ${{ inputs.fecha }}          # solo en lanzamientos a mano
 
           # Si arranca antes de medianoche, espera hasta 45 min a que abra el dia.
           # Si el cron llega tarde, no espera nada y dispara ya.
