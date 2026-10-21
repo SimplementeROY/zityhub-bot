@@ -24,6 +24,8 @@ const CFG = {
   // Si el puesto preferido está ocupado: 'fail' avisa, 'any' coge cualquier libre.
   fallback:   process.env.ZH_FALLBACK || 'fail',
   holidays:   list(process.env.ZH_HOLIDAYS, [], String),    // 'YYYY-MM-DD,YYYY-MM-DD'
+  // Día concreto 'YYYY-MM-DD' para pruebas: se reserva aunque no sea laborable.
+  date:       process.env.ZH_DATE || '',
   attempts:   int(process.env.ZH_ATTEMPTS, 10),
   attemptGapMs: int(process.env.ZH_ATTEMPT_GAP_MS, 15000),
   dryRun:     process.env.ZH_DRY_RUN === '1',
@@ -40,6 +42,9 @@ function checkConfig() {
   if (!CFG.deskIds.length && CFG.fallback !== 'any') missing.push('ZH_DESK_IDS');
   if (missing.length) {
     throw new Error(`Faltan variables: ${missing.join(', ')}. Ponlas en Settings > Secrets and variables > Actions > Variables (ver README.md).`);
+  }
+  if (CFG.date && !/^\d{4}-\d{2}-\d{2}$/.test(CFG.date)) {
+    throw new Error(`La fecha tiene que ir como YYYY-MM-DD, no '${CFG.date}'.`);
   }
 }
 
@@ -209,7 +214,7 @@ async function bookOnce(date) {
 
 /** Si arrancamos poco antes de la medianoche (en CFG.tz), espera a que se abra el dia nuevo. */
 async function waitForWindow() {
-  if (process.env.ZH_WAIT_FOR_MIDNIGHT !== '1') return;
+  if (process.env.ZH_WAIT_FOR_MIDNIGHT !== '1' || CFG.date) return;
   const maxWaitMs = int(process.env.ZH_MAX_WAIT_MIN, 45) * 60000;
   const ms = wallToUtc(addDays(todayIn(CFG.tz), 1), '00:00', CFG.tz).getTime() + 5000 - Date.now();
   if (ms > 0 && ms <= maxWaitMs) {
@@ -248,11 +253,11 @@ async function main() {
 
   const today = todayIn(CFG.tz);
 
-  const target = nthBusinessDayAfter(today, CFG.advanceBusinessDays);
+  const target = CFG.date || nthBusinessDayAfter(today, CFG.advanceBusinessDays);
 
   log(`Hoy en ${CFG.tz}: ${today}. Día objetivo: ${target} (${CFG.startLocal}-${CFG.endLocal}).`);
 
-  if (!isWorkday(target)) { log('El día objetivo no es laborable. Nada que hacer.'); return; }
+  if (!CFG.date && !isWorkday(target)) { log('El día objetivo no es laborable. Nada que hacer.'); return; }
 
   await login();
 

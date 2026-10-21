@@ -16,7 +16,8 @@ ventana de reserva. Corre en GitHub Actions (`.github/workflows/reserva.yml`).
    secret* / *New repository variable*, nombre exacto y valor.
 4. Rellena los secrets y las variables de abajo.
 5. Prueba en **Actions > Reserva Zityhub > Run workflow** con modo `simulacion`:
-   el log dice qué puesto reservaría sin reservar nada.
+   el log dice qué puesto reservaría sin reservar nada. En `fecha` puedes poner un
+   día concreto (`2026-10-24`, aunque sea fin de semana); vacío = el día que toca.
 
 Las tiradas programadas reservan de verdad.
 
