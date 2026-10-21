@@ -5,10 +5,17 @@ ventana de reserva. Corre en GitHub Actions (`.github/workflows/reserva.yml`).
 
 ## Cómo usarlo
 
-1. Haz un fork de este repo.
-2. En tu fork: **Settings > Secrets and variables > Actions**.
-3. Rellena los secrets y las variables de abajo.
-4. Prueba en **Actions > Reserva Zityhub > Run workflow** con modo `simulacion`:
+1. Haz un fork de este repo. Los secrets y las variables no se copian con el fork:
+   cada uno pone los suyos.
+2. En tu fork, pestaña **Actions**: pulsa *I understand my workflows, go ahead and
+   enable them*. GitHub desactiva Actions en los forks hasta que lo activas.
+3. Pestaña **Settings** > menú izquierdo, sección *Security* > **Secrets and
+   variables > Actions** (o directo:
+   `https://github.com/<tu-usuario>/zityhub-bot/settings/variables/actions`).
+   Tiene dos pestañas, *Secrets* y *Variables*. En cada una: *New repository
+   secret* / *New repository variable*, nombre exacto y valor.
+4. Rellena los secrets y las variables de abajo.
+5. Prueba en **Actions > Reserva Zityhub > Run workflow** con modo `simulacion`:
    el log dice qué puesto reservaría sin reservar nada.
 
 Las tiradas programadas reservan de verdad.
